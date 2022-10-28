@@ -1,4 +1,3 @@
-from re import S
 import numpy as np
 from abc import ABC, abstractmethod
 
@@ -142,7 +141,7 @@ class LBFGS(Optimizer):
         """
         L-BFGS line search algorithm.
         """
-        jmax = np.ceil(np.log(1e-14) / np.log(gam))
+        jmax = int(np.ceil(np.log(1e-14) / np.log(gam)))
         a = 1
         f0 = self.loss(w)
         aux = eta * np.inner(p, g)
@@ -198,7 +197,7 @@ class LBFGS(Optimizer):
             for data_batch in self._gen_batches():
                 gnew = self.grad(w, data_batch)
                 p = self._finddirection(gnew, s[:min(updates, self.m)], y[:min(updates, self.m)])
-                w += self.step_size * p
+                w -= self.step_size * p
                 step_count += 1
                 if step_count % self.update_freq == 0:
                     s = np.roll(s, 1, axis=0)
