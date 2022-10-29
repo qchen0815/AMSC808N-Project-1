@@ -132,34 +132,36 @@ class Adam(Optimizer):
 class LBFGS(Optimizer):
 
     def __init__(self, data, batch_size, step_size, epochs, loss, grad,
-                 m=5, update_freq=10):
+                 m=5, update_freq=10, eta=0.5, gam=0.9):
         super().__init__(data, batch_size, step_size, epochs, loss, grad)
         self.m = m
         self.update_freq = update_freq
+        self.eta = eta
+        self.gam = gam
+        self.jmax = int(np.ceil(np.log(1e-2) / np.log(gam)))
 
-    def _linesearch(self, w, p, g, eta=0.5, gam=0.9) -> float:
+    def _linesearch(self, x, p, g) -> tuple:
         """
-        L-BFGS line search algorithm.
+        L-BFGS line search algorithm from lecture notes.
         """
-        jmax = int(np.ceil(np.log(1e-14) / np.log(gam)))
         a = 1
-        f0 = self.loss(w)
-        aux = eta * np.inner(p, g)
-        for _ in range(jmax):
-            wtry = w + a * p
-            f1 = self.loss(wtry)
+        f0 = self.loss(x)
+        aux = self.eta * np.inner(p, g)
+        for j in range(self.jmax):
+            xtry = x + a * p
+            f1 = self.loss(xtry)
             if f1 < f0 + a * aux:
                 break
             else:
-                a *= gam
-        return a
+                a *= self.gam
+        return a, j
 
-    def _finddirection(self, g, s, y) -> np.ndarray:
+    def _finddirection(self, g, s, y, rho) -> np.ndarray:
         """
-        Function to compute step direction in stochastic L-BFGS.
+        Function to compute step direction in stochastic L-BFGS
+        taken from lecture notes.
         """
         m = len(s)
-        rho = 1 / np.sum(s * y, axis=1)
         a = np.zeros(m)
         for i in range(m):
             a[i] = rho[i] * np.inner(s[i], g)
@@ -176,39 +178,55 @@ class LBFGS(Optimizer):
         self.loss_hist = []
         self.grad_norms = []
 
-        w = np.random.rand(self.data.shape[1])
+        x = np.random.rand(self.data.shape[1])
         s = np.zeros((self.m, self.data.shape[1]))
         y = np.zeros((self.m, self.data.shape[1]))
-        step_count = 0
+        rho = np.zeros(self.m)
         updates = 1
 
         # first initial step
-        batches = np.random.choice(len(self.data), 2 * self.batch_size, replace=False)
-        gradient = self.grad(w, self.data[batches[:self.batch_size]])
-        a = self._linesearch(w, -gradient, gradient)
-        wnew = w - a * gradient
-        gnew = self.grad(wnew, self.data[batches[self.batch_size:]])
-        s[0] = wnew - w
-        y[0] = gnew - gradient
-        w = wnew
-        gradient = gnew
+        init_batches = np.random.choice(len(self.data), 2 * self.batch_size, replace=False)
+        g = self.grad(x, self.data[init_batches[:self.batch_size]])
+        a = self.step_size if self.step_size else self._linesearch(x, -g, g)[0]
+        xnew = x - a * g
+        gnew = self.grad(xnew, self.data[init_batches[self.batch_size:]])
+        s[0] = xnew - x
+        y[0] = gnew - g
+        rho[0] = 1 / np.inner(s[0], y[0])
+        x = xnew
+        g = gnew
+        iter = 1
 
         for _ in range(self.epochs):
             for data_batch in self._gen_batches():
-                gnew = self.grad(w, data_batch)
-                p = self._finddirection(gnew, s[:min(updates, self.m)], y[:min(updates, self.m)])
-                w -= self.step_size * p
-                step_count += 1
-                if step_count % self.update_freq == 0:
+                if updates < self.m:
+                    p = self._finddirection(g, s[:updates], y[:updates], rho[:updates])
+                else:
+                    p = self._finddirection(g, s, y, rho)
+                if self.step_size:
+                    a = self.step_size
+                else:
+                    a, j = self._linesearch(x, p, g)
+                    if j == self.jmax:
+                        p = -g
+                        a, j = self._linesearch(x, p, g)
+                step = a * p
+                xnew = x + step
+                gnew = self.grad(xnew, data_batch)
+                if iter % self.update_freq == 0:
                     s = np.roll(s, 1, axis=0)
                     y = np.roll(y, 1, axis=0)
-                    s[0] = self.step_size * p
-                    y[0] = gnew - gradient
+                    rho = np.roll(rho, 1)
+                    s[0] = step
+                    y[0] = gnew - g
+                    rho[0] = 1 / np.inner(step, y[0])
                     updates += 1
-                gradient = gnew
+                x = xnew
+                g = gnew
+                iter += 1
 
-                self.grad_norms.append(np.linalg.norm(gradient))
+                self.grad_norms.append(np.linalg.norm(g))
 
-            self.loss_hist.append(self.loss(w))
+            self.loss_hist.append(self.loss(x))
 
-        return w
+        return x
