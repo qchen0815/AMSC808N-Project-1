@@ -60,7 +60,7 @@ class SGD(Optimizer):
 
                 self.grad_norms.append(np.linalg.norm(gradient))
 
-            self.loss_hist.append(self.loss(w))
+            self.loss_hist.append(self.loss(w, self.data))
 
         return w
 
@@ -89,7 +89,7 @@ class Nesterov(Optimizer):
 
                 self.grad_norms.append(np.linalg.norm(gradient))
 
-            self.loss_hist.append(self.loss(y))
+            self.loss_hist.append(self.loss(y, self.data))
 
         return y
 
@@ -124,7 +124,7 @@ class Adam(Optimizer):
 
                 self.grad_norms.append(np.linalg.norm(gradient))
 
-            self.loss_hist.append(self.loss(w))
+            self.loss_hist.append(self.loss(w, self.data))
 
         return w
 
@@ -145,11 +145,11 @@ class LBFGS(Optimizer):
         L-BFGS line search algorithm from lecture notes.
         """
         a = 1
-        f0 = self.loss(x)
+        f0 = self.loss(x, self.data)
         aux = self.eta * np.inner(p, g)
         for j in range(self.jmax):
             xtry = x + a * p
-            f1 = self.loss(xtry)
+            f1 = self.loss(xtry, self.data)
             if f1 < f0 + a * aux:
                 break
             else:
@@ -227,6 +227,6 @@ class LBFGS(Optimizer):
 
                 self.grad_norms.append(np.linalg.norm(g))
 
-            self.loss_hist.append(self.loss(x))
+            self.loss_hist.append(self.loss(x, self.data))
 
         return x
