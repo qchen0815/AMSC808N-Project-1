@@ -43,20 +43,29 @@ class Optimizer(ABC):
 
 
 class SGD(Optimizer):
+    """
+    The step_size argument can either be a `float` or a schedule
+    function that takes a single parameter for iteration k and
+    returns the step size at that iteration.
+    """
 
     def __init__(self, data, batch_size, step_size, epochs, loss, grad):
         super().__init__(data, batch_size, step_size, epochs, loss, grad)
+        if type(step_size) == float:
+            self.step_size = lambda k: step_size
 
     def minimize(self):
         self.loss_hist = []
         self.grad_norms = []
 
         w = np.random.rand(self.data.shape[1])
+        k = 0
 
         for _ in range(self.epochs):
             for data_batch in self._gen_batches():
                 gradient = self.grad(w, data_batch)
-                w = w - self.step_size * gradient
+                w = w - self.step_size(k) * gradient
+                k += 1
 
                 self.grad_norms.append(np.linalg.norm(gradient))
 
@@ -130,6 +139,11 @@ class Adam(Optimizer):
 
 
 class LBFGS(Optimizer):
+    """
+    The step_size argument can either be a `float` or `None`. `None` will
+    use the L-BFGS line search function to compute step size at each iteration,
+    a `float` value will use a fixed step size.
+    """
 
     def __init__(self, data, batch_size, step_size, epochs, loss, grad,
                  m=5, update_freq=10, eta=0.5, gam=0.9):
