@@ -1,5 +1,6 @@
 import numpy as np
 from abc import ABC, abstractmethod
+from tqdm import tqdm
 
 
 class Optimizer(ABC):
@@ -61,7 +62,7 @@ class SGD(Optimizer):
         w = np.random.rand(self.data.shape[1])
         k = 0
 
-        for _ in range(self.epochs):
+        for _ in tqdm(range(self.epochs), desc='SGD'):
             for data_batch in self._gen_batches():
                 gradient = self.grad(w, data_batch)
                 w = w - self.step_size(k) * gradient
@@ -87,7 +88,7 @@ class Nesterov(Optimizer):
         x = np.zeros(self.data.shape[1])
         k = 0
 
-        for _ in range(self.epochs):
+        for _ in tqdm(range(self.epochs), desc='Nesterov'):
             for data_batch in self._gen_batches():
                 gradient = self.grad(y, data_batch)
                 x_step = y - self.step_size * gradient
@@ -121,7 +122,7 @@ class Adam(Optimizer):
         v = np.zeros(self.data.shape[1])
         t = 0
 
-        for _ in range(self.epochs):
+        for _ in tqdm(range(self.epochs), desc='Adam'):
             for data_batch in self._gen_batches():
                 t += 1
                 gradient = self.grad(w, data_batch)
@@ -211,7 +212,7 @@ class LBFGS(Optimizer):
         g = gnew
         iter = 1
 
-        for _ in range(self.epochs):
+        for _ in tqdm(range(self.epochs), desc='L-BFGS'):
             for data_batch in self._gen_batches():
                 if updates < self.m:
                     p = self._finddirection(g, s[:updates], y[:updates], rho[:updates])
