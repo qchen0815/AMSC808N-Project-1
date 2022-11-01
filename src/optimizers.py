@@ -42,6 +42,10 @@ class Optimizer(ABC):
         """
         ...
 
+    @abstractmethod
+    def __str__(self) -> str:
+        ...
+
 
 class SGD(Optimizer):
     """
@@ -74,6 +78,9 @@ class SGD(Optimizer):
 
         return w
 
+    def __str__(self):
+        return 'SGD'
+
 
 class Nesterov(Optimizer):
 
@@ -102,6 +109,9 @@ class Nesterov(Optimizer):
             self.loss_hist.append(self.loss(y, self.data))
 
         return y
+
+    def __str__(self):
+        return 'Nesterov'
 
 
 class Adam(Optimizer):
@@ -137,6 +147,9 @@ class Adam(Optimizer):
             self.loss_hist.append(self.loss(w, self.data))
 
         return w
+    
+    def __str__(self):
+        return 'Adam'
 
 
 class LBFGS(Optimizer):
@@ -245,3 +258,6 @@ class LBFGS(Optimizer):
             self.loss_hist.append(self.loss(x, self.data))
 
         return x
+
+    def __str__(self):
+        return 'LBFGS'
