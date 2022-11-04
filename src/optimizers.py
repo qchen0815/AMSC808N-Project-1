@@ -160,7 +160,7 @@ class LBFGS(Optimizer):
     """
 
     def __init__(self, data, batch_size, step_size, epochs, loss, grad,
-                 m=5, update_freq=10, eta=0.5, gam=0.9):
+                 m=10, update_freq=20, eta=0.5, gam=0.9):
         super().__init__(data, batch_size, step_size, epochs, loss, grad)
         self.m = m
         self.update_freq = update_freq
